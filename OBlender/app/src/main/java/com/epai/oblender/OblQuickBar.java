@@ -109,6 +109,10 @@ public class OblQuickBar extends LinearLayout {
         undoBtn.setOnClickListener(v -> sendBracketedKey(new int[]{ORD_CTRL}, ORD_Z));
         redoBtn.setOnClickListener(v -> sendBracketedKey(new int[]{ORD_CTRL, ORD_SHIFT}, ORD_Z));
 
+        // See OblSettingFragment#initial() for why this needs to be clickable:
+        // a non-clickable View doesn't consume ACTION_HOVER_*, which can cause a
+        // stylus's ACTION_DOWN (preceded by ACTION_HOVER_EXIT) to be missed.
+        dragHandle.setClickable(true);
         dragHandle.setOnTouchListener(this::onDragTouch);
 
         mCollapseToggle.setOnClickListener(v -> setCollapsed(!isCollapsed()));

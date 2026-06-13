@@ -230,6 +230,14 @@ public class OblSettingFragment extends View {
     }
 
     public void initial() {
+        // Plain Views report ACTION_HOVER_* as unhandled (View#onHoverEvent only
+        // consumes hover for clickable/long-clickable views). When a stylus hovers
+        // before tapping, an unconsumed ACTION_HOVER_EXIT can leave this overlay
+        // out of the touch-target handoff, so the following ACTION_DOWN is
+        // sometimes dropped. Marking the view clickable opts it back into the
+        // normal hover-to-touch handoff for our manually hit-tested buttons.
+        setClickable(true);
+
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setAntiAlias(true);
         mPaint.setDither(true);
@@ -386,7 +394,7 @@ public class OblSettingFragment extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        int action = event.getAction();
+        int action = event.getActionMasked();
         if (action == MotionEvent.ACTION_DOWN) {
             float posx = event.getX();
             float posy = event.getY();
