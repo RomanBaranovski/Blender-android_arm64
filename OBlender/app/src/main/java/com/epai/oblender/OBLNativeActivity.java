@@ -12,7 +12,10 @@ import android.graphics.PixelFormat;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Xml;
 import android.view.Gravity;
@@ -53,6 +56,7 @@ import org.xmlpull.v1.XmlPullParser;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +81,67 @@ public class OBLNativeActivity extends NativeActivity
 
     private OblSettingFragment mOblSettingFragment = null;
     private boolean mBooleanLastOblSettingFragmentVisible=false;
+    private OblQuickBar mOblQuickBar = null;
+    private OblPieMenu mOblPieMenu = null;
+
+    // Diameter of the radial quick-action menu opened by holding the stylus's
+    // side button.
+    private static final int PIE_MENU_DIAMETER_DP = 280;
+    // How long the stylus button must be held (without releasing) before the
+    // pie menu opens.
+    private static final long PIE_HOLD_DELAY_MS = 220L;
+    // Max gap between two stylus-button clicks to count as a double-click.
+    private static final long DOUBLE_CLICK_WINDOW_MS = 300L;
+    private static final int DOUBLE_CLICK_SLOP_DP = 24;
+    // Gaps between the on/key/off steps of a modifier+key sequence, in case
+    // the native side only samples modifier state once per frame.
+    private static final long MODIFIER_SETTLE_DELAY_MS = 40L;
+    private static final long KEY_RELEASE_DELAY_MS = 40L;
+
+    // Pie menu slices, starting at the top and going clockwise, matching
+    // OblPieMenu's LABELS. Multi-key entries are sent as modifier(s)-on,
+    // key, modifier(s)-off.
+    private static final int[][] PIE_SLICE_KEYS = {
+            {OBLButtonID.OBLButtonID_G.ordinal()},                                          // Grab
+            {OBLButtonID.OBLButtonID_R.ordinal()},                                          // Rotate
+            {OBLButtonID.OBLButtonID_S.ordinal()},                                          // Scale
+            {OBLButtonID.OBLButtonID_E.ordinal()},                                          // Extrude
+            {OBLButtonID.OBLButtonID_X.ordinal()},                                          // Delete
+            {OBLButtonID.OBLButtonID_Ctrl.ordinal(), OBLButtonID.OBLButtonID_R.ordinal()},  // Loop Cut
+            {OBLButtonID.OBLButtonID_Ctrl.ordinal(), OBLButtonID.OBLButtonID_B.ordinal()},  // Bevel
+            {OBLButtonID.OBLButtonID_I.ordinal()},                                          // Inset
+    };
+
+    private final Handler mPenHandler = new Handler(Looper.getMainLooper());
+    private boolean mPenButtonDown = false;
+    private Runnable mPieOpenRunnable = null;
+    private float mPieVisualCenterX = 0f;
+    private float mPieVisualCenterY = 0f;
+    private int mPieDiameterPx = 0;
+    private float mClickSlopPx = 0f;
+    private long mLastPenClickTime = 0L;
+    private float mLastPenClickX = 0f;
+    private float mLastPenClickY = 0f;
+
+    private String joinKeys(int[] keys) {
+        ArrayList<String> strings = new ArrayList<>();
+        for (int key : keys) {
+            strings.add(String.valueOf(key));
+        }
+        return String.join(",", strings);
+    }
+
+    private void sendKeysOn(int[] keys) {
+        oblSetValueOn(joinKeys(keys));
+    }
+
+    private void sendKeysOff(int[] keys) {
+        oblSetValueOff(joinKeys(keys));
+    }
+
+    private void sendKey(int[] keys) {
+        oblSetValue(joinKeys(keys));
+    }
 
     public String getClipboard(boolean selection){
         ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
@@ -97,13 +162,15 @@ public class OBLNativeActivity extends NativeActivity
     }
 
     public void SetValue(int type,int value){
-        if (mOblSettingFragment == null) {
-            return;
-        }
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mOblSettingFragment.SetValue(type,value);
+                if (mOblSettingFragment != null) {
+                    mOblSettingFragment.SetValue(type,value);
+                }
+                if (mOblQuickBar != null) {
+                    mOblQuickBar.SetValue(type,value);
+                }
             }
         });
     }
@@ -160,29 +227,17 @@ public class OBLNativeActivity extends NativeActivity
                         mOblSettingFragment.setOBLSettingFragmentListener(new OblSettingFragment.OBLSettingFragmentListener() {
                             @Override
                             public void enterKey(int[] keys) {
-                                ArrayList<String> strings = new ArrayList<>();
-                                for (int i = 0; i < keys.length; i++) {
-                                    strings.add(String.valueOf(keys[i]));
-                                }
-                                oblSetValue(String.join(",", strings));
+                                sendKey(keys);
                             }
 
                             @Override
                             public void enterKeyOff(int[] keys) {
-                                ArrayList<String> strings = new ArrayList<>();
-                                for (int i = 0; i < keys.length; i++) {
-                                    strings.add(String.valueOf(keys[i]));
-                                }
-                                oblSetValueOff(String.join(",", strings));
+                                sendKeysOff(keys);
                             }
 
                             @Override
                             public void enterKeyOn(int[] keys) {
-                                ArrayList<String> strings = new ArrayList<>();
-                                for (int i = 0; i < keys.length; i++) {
-                                    strings.add(String.valueOf(keys[i]));
-                                }
-                                oblSetValueOn(String.join(",", strings));
+                                sendKeysOn(keys);
                             }
 
                             @Override
@@ -295,6 +350,8 @@ public class OBLNativeActivity extends NativeActivity
         hideToolbar();
 
         initialEditText();
+        initialQuickBar();
+        initialPieMenu();
 
         // Example of a call to a native method
 
@@ -320,6 +377,9 @@ public class OBLNativeActivity extends NativeActivity
                 }else{
                     mBooleanLastOblSettingFragmentVisible=false;
                 }
+                if (mOblQuickBar!=null){
+                    mOblQuickBar.setVisibility(View.INVISIBLE);
+                }
                 ScreenUtils.fullScreen(getWindow());
             }
 
@@ -330,6 +390,9 @@ public class OBLNativeActivity extends NativeActivity
                     if (mBooleanLastOblSettingFragmentVisible){
                         mOblSettingFragment.setVisibility(View.VISIBLE);
                     }
+                }
+                if (mOblQuickBar!=null){
+                    mOblQuickBar.setVisibility(View.VISIBLE);
                 }
             }
         });
@@ -390,6 +453,156 @@ public class OBLNativeActivity extends NativeActivity
 
             mGodotEditText.setVisibility(View.GONE);
         }
+    }
+
+    private void initialQuickBar() {
+        if (mOblQuickBar != null) {
+            return;
+        }
+        mOblQuickBar = new OblQuickBar(this);
+        mOblQuickBar.setOblQuickBarListener(new OblQuickBar.OblQuickBarListener() {
+            @Override
+            public void onModifierOn(int[] ordinals) {
+                sendKeysOn(ordinals);
+            }
+
+            @Override
+            public void onModifierOff(int[] ordinals) {
+                sendKeysOff(ordinals);
+            }
+
+            @Override
+            public void onMomentaryKey(int[] ordinals) {
+                sendKey(ordinals);
+            }
+        });
+        getWindowManager().addView(mOblQuickBar, mOblQuickBar.createLayoutParams());
+    }
+
+    private void initialPieMenu() {
+        if (mOblPieMenu != null) {
+            return;
+        }
+        mOblPieMenu = new OblPieMenu(this);
+        float density = getResources().getDisplayMetrics().density;
+        mPieDiameterPx = (int) (PIE_MENU_DIAMETER_DP * density);
+        mClickSlopPx = DOUBLE_CLICK_SLOP_DP * density;
+        WindowManager.LayoutParams lp = mOblPieMenu.createLayoutParams(mPieDiameterPx);
+        mOblPieMenu.setVisibility(View.GONE);
+        getWindowManager().addView(mOblPieMenu, lp);
+    }
+
+    /**
+     * Intercepts whole touch gestures started with the stylus's side button
+     * held: a sustained hold opens the radial quick-action pie menu (dragging
+     * to a wedge and releasing fires that action), while a quick double-click
+     * toggles {@link #mOblQuickBar}'s collapsed state. Gestures that don't
+     * start with the side button held pass through unchanged.
+     */
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        boolean stylusButton = (ev.getButtonState() & MotionEvent.BUTTON_STYLUS_PRIMARY) != 0;
+        switch (ev.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                if (stylusButton && mOblPieMenu != null) {
+                    mPenButtonDown = true;
+                    final float downX = ev.getRawX();
+                    final float downY = ev.getRawY();
+                    mPieOpenRunnable = () -> openPieMenu(downX, downY);
+                    mPenHandler.postDelayed(mPieOpenRunnable, PIE_HOLD_DELAY_MS);
+                    return true;
+                }
+                break;
+            case MotionEvent.ACTION_MOVE:
+                if (mPenButtonDown) {
+                    if (mOblPieMenu.getVisibility() == View.VISIBLE) {
+                        mOblPieMenu.updateSelection(ev.getRawX() - mPieVisualCenterX, ev.getRawY() - mPieVisualCenterY);
+                    }
+                    return true;
+                }
+                break;
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                if (mPenButtonDown) {
+                    mPenHandler.removeCallbacks(mPieOpenRunnable);
+                    mPenButtonDown = false;
+                    if (mOblPieMenu.getVisibility() == View.VISIBLE) {
+                        int slice = mOblPieMenu.getSelectedIndex();
+                        closePieMenu();
+                        if (ev.getActionMasked() == MotionEvent.ACTION_UP) {
+                            firePieAction(slice);
+                        }
+                    } else if (ev.getActionMasked() == MotionEvent.ACTION_UP) {
+                        handleStylusClick(ev.getEventTime(), ev.getRawX(), ev.getRawY());
+                    }
+                    return true;
+                }
+                break;
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    private void handleStylusClick(long eventTime, float x, float y) {
+        boolean isDoubleClick = mLastPenClickTime != 0L
+                && (eventTime - mLastPenClickTime) <= DOUBLE_CLICK_WINDOW_MS
+                && Math.hypot(x - mLastPenClickX, y - mLastPenClickY) <= mClickSlopPx;
+        if (isDoubleClick) {
+            mLastPenClickTime = 0L;
+            if (mOblQuickBar != null) {
+                mOblQuickBar.toggleCollapsed();
+            }
+        } else {
+            mLastPenClickTime = eventTime;
+            mLastPenClickX = x;
+            mLastPenClickY = y;
+        }
+    }
+
+    private void openPieMenu(float centerX, float centerY) {
+        if (mOblPieMenu == null) {
+            return;
+        }
+        mOblPieMenu.reset();
+
+        DisplayMetrics metrics = getResources().getDisplayMetrics();
+        float x = clamp(centerX - mPieDiameterPx / 2f, 0, metrics.widthPixels - mPieDiameterPx);
+        float y = clamp(centerY - mPieDiameterPx / 2f, 0, metrics.heightPixels - mPieDiameterPx);
+        mPieVisualCenterX = x + mPieDiameterPx / 2f;
+        mPieVisualCenterY = y + mPieDiameterPx / 2f;
+
+        WindowManager.LayoutParams lp = (WindowManager.LayoutParams) mOblPieMenu.getLayoutParams();
+        lp.x = (int) x;
+        lp.y = (int) y;
+        getWindowManager().updateViewLayout(mOblPieMenu, lp);
+        mOblPieMenu.setVisibility(View.VISIBLE);
+    }
+
+    private void closePieMenu() {
+        if (mOblPieMenu != null) {
+            mOblPieMenu.setVisibility(View.GONE);
+        }
+    }
+
+    private static float clamp(float value, float min, float max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private void firePieAction(int slice) {
+        if (slice < 0 || slice >= PIE_SLICE_KEYS.length) {
+            return;
+        }
+        int[] keys = PIE_SLICE_KEYS[slice];
+        if (keys.length == 1) {
+            sendKey(keys);
+            return;
+        }
+        int[] modifiers = Arrays.copyOf(keys, keys.length - 1);
+        int keyOrdinal = keys[keys.length - 1];
+        sendKeysOn(modifiers);
+        mPenHandler.postDelayed(() -> {
+            sendKey(new int[]{keyOrdinal});
+            mPenHandler.postDelayed(() -> sendKeysOff(modifiers), KEY_RELEASE_DELAY_MS);
+        }, MODIFIER_SETTLE_DELAY_MS);
     }
 
     public void showKeyboardApp(String p_existing_text, int p_type, int p_max_input_length, int p_cursor_start, int p_cursor_end) {

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:id="@+id/quickbar_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/quickbar_drag_handle"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/quickbar_drag_handle"
+            android:textColor="@android:color/white"
+            android:textSize="20sp"
+            android:contentDescription="@string/quickbar_desc_drag_handle" />
+
+        <TextView
+            android:id="@+id/quickbar_collapse_toggle"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:gravity="center"
+            android:text="@string/quickbar_collapse"
+            android:textColor="@android:color/white"
+            android:textSize="20sp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="@drawable/selector_quickbar_toggle"
+            android:contentDescription="@string/quickbar_desc_collapse" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/quickbar_buttons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <ToggleButton
+            android:id="@+id/quickbar_btn_ctrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:minWidth="56dp"
+            android:minHeight="48dp"
+            android:textOn="@string/quickbar_ctrl"
+            android:textOff="@string/quickbar_ctrl"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:background="@drawable/selector_quickbar_toggle"
+            android:contentDescription="@string/quickbar_desc_ctrl" />
+
+        <ToggleButton
+            android:id="@+id/quickbar_btn_shift"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:minWidth="56dp"
+            android:minHeight="48dp"
+            android:textOn="@string/quickbar_shift"
+            android:textOff="@string/quickbar_shift"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:background="@drawable/selector_quickbar_toggle"
+            android:contentDescription="@string/quickbar_desc_shift" />
+
+        <ToggleButton
+            android:id="@+id/quickbar_btn_alt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:minWidth="56dp"
+            android:minHeight="48dp"
+            android:textOn="@string/quickbar_alt"
+            android:textOff="@string/quickbar_alt"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:background="@drawable/selector_quickbar_toggle"
+            android:contentDescription="@string/quickbar_desc_alt" />
+
+        <ToggleButton
+            android:id="@+id/quickbar_btn_rmb"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:minWidth="56dp"
+            android:minHeight="48dp"
+            android:textOn="@string/quickbar_rmb"
+            android:textOff="@string/quickbar_rmb"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:background="@drawable/selector_quickbar_toggle"
+            android:contentDescription="@string/quickbar_desc_rmb" />
+
+        <ToggleButton
+            android:id="@+id/quickbar_btn_mmb"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:minWidth="56dp"
+            android:minHeight="48dp"
+            android:textOn="@string/quickbar_mmb"
+            android:textOff="@string/quickbar_mmb"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:background="@drawable/selector_quickbar_toggle"
+            android:contentDescription="@string/quickbar_desc_mmb" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="2dp"
+            android:background="@color/quickbar_btn_normal" />
+
+        <Button
+            android:id="@+id/quickbar_btn_undo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:minWidth="56dp"
+            android:minHeight="48dp"
+            android:text="@string/quickbar_undo"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:background="@drawable/selector_quickbar_toggle"
+            android:contentDescription="@string/quickbar_desc_undo" />
+
+        <Button
+            android:id="@+id/quickbar_btn_redo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:minWidth="56dp"
+            android:minHeight="48dp"
+            android:text="@string/quickbar_redo"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:background="@drawable/selector_quickbar_toggle"
+            android:contentDescription="@string/quickbar_desc_redo" />
+
+    </LinearLayout>
+
+</merge>
