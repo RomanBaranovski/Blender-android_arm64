@@ -123,6 +123,11 @@ public class OblQuickBar extends LinearLayout {
         mListener = listener;
     }
 
+    /** Toggles between collapsed and expanded, e.g. from a stylus double-click shortcut. */
+    public void toggleCollapsed() {
+        setCollapsed(!isCollapsed());
+    }
+
     /**
      * Builds the {@link WindowManager.LayoutParams} this bar should be added
      * with, restoring its last persisted position (or a left-edge default).
