@@ -5,4 +5,25 @@
     <string name="title_activity_startup">FullscreenActivity</string>
     <string name="dummy_button">Dummy Button</string>
     <string name="dummy_content">DUMMY\nCONTENT</string>
+
+    <string name="quickbar_ctrl">Ctrl</string>
+    <string name="quickbar_shift">Shift</string>
+    <string name="quickbar_alt">Alt</string>
+    <string name="quickbar_rmb">RMB</string>
+    <string name="quickbar_mmb">MMB</string>
+    <string name="quickbar_undo">↶</string>
+    <string name="quickbar_redo">↷</string>
+    <string name="quickbar_drag_handle">⠿</string>
+    <string name="quickbar_collapse">‹</string>
+    <string name="quickbar_expand">›</string>
+    <string name="quickbar_desc_drag_handle">Drag to move quick bar</string>
+    <string name="quickbar_desc_collapse">Collapse quick bar</string>
+    <string name="quickbar_desc_expand">Expand quick bar</string>
+    <string name="quickbar_desc_ctrl">Hold Ctrl</string>
+    <string name="quickbar_desc_shift">Hold Shift</string>
+    <string name="quickbar_desc_alt">Hold Alt</string>
+    <string name="quickbar_desc_rmb">Hold right mouse button</string>
+    <string name="quickbar_desc_mmb">Hold middle mouse button</string>
+    <string name="quickbar_desc_undo">Undo</string>
+    <string name="quickbar_desc_redo">Redo</string>
 </resources>

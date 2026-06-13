@@ -77,6 +77,27 @@ public class OBLNativeActivity extends NativeActivity
 
     private OblSettingFragment mOblSettingFragment = null;
     private boolean mBooleanLastOblSettingFragmentVisible=false;
+    private OblQuickBar mOblQuickBar = null;
+
+    private String joinKeys(int[] keys) {
+        ArrayList<String> strings = new ArrayList<>();
+        for (int key : keys) {
+            strings.add(String.valueOf(key));
+        }
+        return String.join(",", strings);
+    }
+
+    private void sendKeysOn(int[] keys) {
+        oblSetValueOn(joinKeys(keys));
+    }
+
+    private void sendKeysOff(int[] keys) {
+        oblSetValueOff(joinKeys(keys));
+    }
+
+    private void sendKey(int[] keys) {
+        oblSetValue(joinKeys(keys));
+    }
 
     public String getClipboard(boolean selection){
         ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
@@ -97,13 +118,15 @@ public class OBLNativeActivity extends NativeActivity
     }
 
     public void SetValue(int type,int value){
-        if (mOblSettingFragment == null) {
-            return;
-        }
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mOblSettingFragment.SetValue(type,value);
+                if (mOblSettingFragment != null) {
+                    mOblSettingFragment.SetValue(type,value);
+                }
+                if (mOblQuickBar != null) {
+                    mOblQuickBar.SetValue(type,value);
+                }
             }
         });
     }
@@ -160,29 +183,17 @@ public class OBLNativeActivity extends NativeActivity
                         mOblSettingFragment.setOBLSettingFragmentListener(new OblSettingFragment.OBLSettingFragmentListener() {
                             @Override
                             public void enterKey(int[] keys) {
-                                ArrayList<String> strings = new ArrayList<>();
-                                for (int i = 0; i < keys.length; i++) {
-                                    strings.add(String.valueOf(keys[i]));
-                                }
-                                oblSetValue(String.join(",", strings));
+                                sendKey(keys);
                             }
 
                             @Override
                             public void enterKeyOff(int[] keys) {
-                                ArrayList<String> strings = new ArrayList<>();
-                                for (int i = 0; i < keys.length; i++) {
-                                    strings.add(String.valueOf(keys[i]));
-                                }
-                                oblSetValueOff(String.join(",", strings));
+                                sendKeysOff(keys);
                             }
 
                             @Override
                             public void enterKeyOn(int[] keys) {
-                                ArrayList<String> strings = new ArrayList<>();
-                                for (int i = 0; i < keys.length; i++) {
-                                    strings.add(String.valueOf(keys[i]));
-                                }
-                                oblSetValueOn(String.join(",", strings));
+                                sendKeysOn(keys);
                             }
 
                             @Override
@@ -295,6 +306,7 @@ public class OBLNativeActivity extends NativeActivity
         hideToolbar();
 
         initialEditText();
+        initialQuickBar();
 
         // Example of a call to a native method
 
@@ -320,6 +332,9 @@ public class OBLNativeActivity extends NativeActivity
                 }else{
                     mBooleanLastOblSettingFragmentVisible=false;
                 }
+                if (mOblQuickBar!=null){
+                    mOblQuickBar.setVisibility(View.INVISIBLE);
+                }
                 ScreenUtils.fullScreen(getWindow());
             }
 
@@ -330,6 +345,9 @@ public class OBLNativeActivity extends NativeActivity
                     if (mBooleanLastOblSettingFragmentVisible){
                         mOblSettingFragment.setVisibility(View.VISIBLE);
                     }
+                }
+                if (mOblQuickBar!=null){
+                    mOblQuickBar.setVisibility(View.VISIBLE);
                 }
             }
         });
@@ -390,6 +408,30 @@ public class OBLNativeActivity extends NativeActivity
 
             mGodotEditText.setVisibility(View.GONE);
         }
+    }
+
+    private void initialQuickBar() {
+        if (mOblQuickBar != null) {
+            return;
+        }
+        mOblQuickBar = new OblQuickBar(this);
+        mOblQuickBar.setOblQuickBarListener(new OblQuickBar.OblQuickBarListener() {
+            @Override
+            public void onModifierOn(int[] ordinals) {
+                sendKeysOn(ordinals);
+            }
+
+            @Override
+            public void onModifierOff(int[] ordinals) {
+                sendKeysOff(ordinals);
+            }
+
+            @Override
+            public void onMomentaryKey(int[] ordinals) {
+                sendKey(ordinals);
+            }
+        });
+        getWindowManager().addView(mOblQuickBar, mOblQuickBar.createLayoutParams());
     }
 
     public void showKeyboardApp(String p_existing_text, int p_type, int p_max_input_length, int p_cursor_start, int p_cursor_end) {
